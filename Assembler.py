@@ -7,56 +7,62 @@ lineNumber = 0
 variables = []
 labels = []
 lableLine = []
-with open(inputFile, "r") as asm, open(outputFile, "r+") as hack:
+storeCode = []
+with open(inputFile, "r") as asm, open(outputFile, "w+") as hack:
     for line in asm:
         # Start by formatting the hack file
 
         line = re.sub("\s", "", line) # Strip all whitespace
         line = re.sub("/{2}.*", "", line) # Strip all comments
-        
-        # Handle Symbols
 
-        # Start with predefined symbols
-        
-        # First, handle all Rs
-        line = re.sub("^@(R[0-9]|R1[0-5])", "@" + line[2:], line)
-
-        # Next, handle the other predifined symbols
-        line = re.sub("^@SCREEN", "@" + "16384", line)
-        line = re.sub("^@KBD", "@" + "24576", line)
-        line = re.sub("^@SP", "@" + "0", line)
-        line = re.sub("^@LCL", "@" + "1", line)
-        line = re.sub("^@ARG", "@" + "2", line)
-        line = re.sub("^@THIS", "@" + "3", line)
-        line = re.sub("^@THAT", "@" + "4", line)
-
-        # Next, handle creation of labels
+        # Create list of all labels
         isLabel = re.search("^(\([a-z|A-Z|\.|_|\$|:\][\w|\.|:|\$]*\))$", line)
         if(isLabel):
             labels.append(isLabel.string[1:-1])
             lableLine.append(lineNumber)
         
+        if((not isLabel) and (line != "")):
+            storeCode.append(line)
+            lineNumber += 1
+
+    for i in range(len(storeCode)):
+        # Handle Symbols
+
+        # Start with predefined symbols
+        
+        # First, handle all Rs
+        storeCode[i] = re.sub("^@(R[0-9]|R1[0-5])", "@" + storeCode[i][2:], storeCode[i])
+
+        # Next, handle the other predifined symbols
+        storeCode[i] = re.sub("^@SCREEN", "@" + "16384", storeCode[i])
+        storeCode[i] = re.sub("^@KBD", "@" + "24576", storeCode[i])
+        storeCode[i] = re.sub("^@SP", "@" + "0", storeCode[i])
+        storeCode[i] = re.sub("^@LCL", "@" + "1", storeCode[i])
+        storeCode[i] = re.sub("^@ARG", "@" + "2", storeCode[i])
+        storeCode[i] = re.sub("^@THIS", "@" + "3", storeCode[i])
+        storeCode[i] = re.sub("^@THAT", "@" + "4", storeCode[i])
+        
         # Next, handle variables and labels in A commands
-        isVariable = re.search("^@(?![0-9]{1,3}|R[0-9]|R1[0-5]|SCREEN|KBD|SP|LCL|ARG|THIS|THAT)", line)
+        isVariable = re.search("^@(?![0-9]{1,3}|R[0-9]|R1[0-5]|SCREEN|KBD|SP|LCL|ARG|THIS|THAT)", storeCode[i])
         if isVariable:
             variable = isVariable.string[1:]
             if((variable not in variables) and (variable not in labels)):
                 variables.append(variable)
             if(variable not in labels):
-                line = "@" + str(variables.index(variable))
+                storeCode[i] = "@" + str(variables.index(variable) + 16)
             else:
-                line = "@" + lableLine[labels.index(variable)]
-        
-        if((not isLabel) and (line != "")):
-            hack.write(line + "\n")
+                storeCode[i] = "@" + str(lableLine[labels.index(variable)])
 
 
-
-    for line in hack:
+    for j in range(len(storeCode)):
         # Deal with A commands
-        isACommand = re.search("^@[0-9]{1,3}", line) # Check to see if it is an A command
+        isACommand = re.search("^@[0-9]{1,3}", storeCode[j]) # Check to see if it is an A command
         if isACommand:
-            value = int(line[1:]) # Strip the number from the A command
+            value = int(storeCode[j][1:]) # Strip the number from the A command
             binaryValue = format(value, '016b') # Convert to binary
+            storeCode[j] = str(binaryValue)
         
         # Deal with C commands
+        
+        # Write to output
+        hack.write(storeCode[j] + "\n")
