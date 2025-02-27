@@ -63,6 +63,19 @@ with open(inputFile, "r") as asm, open(outputFile, "w+") as hack:
             storeCode[j] = str(binaryValue)
         
         # Deal with C commands
+        else:
+            destSearch = re.search("(M|D|DM|A|AM|AD|ADM)=", storeCode[j])
+            if(destSearch):
+                dest = destSearch.group()[0:-1]
+            compSearch = re.search("(=(0|1|-|!|A|D|M)(M|D|A|1|\+|\-|\||\&)?(1|A|D|M)?)|((0|1|-|!|A|D|M)(M|D|A|1|\+|\-|\||\&)?(1|A|D|M)?);", storeCode[j])
+            print(compSearch.group())
+            if(compSearch.group()[0] == "="):
+                comp = compSearch.group()[1:]
+            if(compSearch.group()[-1] == ";"):
+                comp = compSearch.group()[0:-1]
+            jumpSearch = re.search("JGT|JEQ|JGE|JLT|JNE|JLE|JMP", storeCode[j])
+            if(jumpSearch):
+                jump = jumpSearch.group()
         
         # Write to output
         hack.write(storeCode[j] + "\n")
